@@ -960,7 +960,7 @@ Game_Battler.prototype.paramRate = function(paramId) {
     var length = this.states().length;
     for (var i = 0; i < length; ++i) {
       var obj = this.states()[i];
-      if (obj && obj.rateParams) rate *= obj.rateParams[paramId];
+      if (obj && obj.rateParams) rate += (obj.rateParams[paramId] - 1);
     }
     return rate;
 };
@@ -1025,12 +1025,12 @@ Game_Actor.prototype.paramPlus = function(paramId) {
 
 Game_Actor.prototype.paramRate = function(paramId) {
     var rate = Game_Battler.prototype.paramRate.call(this, paramId);
-    rate *= this.actor().rateParams[paramId];
-    rate *= this.currentClass().rateParams[paramId];
+    rate += (this.actor().rateParams[paramId] - 1);
+    rate += (this.currentClass().rateParams[paramId] - 1);
     var length = this.equips().length;
     for (var i = 0; i < length; ++i) {
       var obj = this.equips()[i];
-      if (obj && obj.rateParams) rate *= obj.rateParams[paramId];
+      if (obj && obj.rateParams) rate += (obj.rateParams[paramId] - 1);
     }
     return rate;
 };
@@ -1099,7 +1099,7 @@ Game_Enemy.prototype.paramPlus = function(paramId) {
 
 Game_Enemy.prototype.paramRate = function(paramId) {
     var rate = Game_Battler.prototype.paramRate.call(this, paramId);
-    rate *= this.enemy().rateParams[paramId];
+    rate += (this.enemy().rateParams[paramId] - 1);
     return rate;
 };
 

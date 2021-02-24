@@ -1948,7 +1948,7 @@ Window_Base.prototype.drawActorSimpleStatus = function(actor, x, y, width) {
     this.drawActorClass(actor, x2, y, width2);
     this.drawActorHp(actor, x2, y + lineHeight * 1, width2);
     this.drawActorMp(actor, x2, y + lineHeight * 2, width2);
-    if (eval(Yanfly.Param.MenuTpGauge)) {
+    if ($dataSystem.optDisplayTp) {
       this.drawActorTp(actor, x2, y + lineHeight * 3, width2);
     }
 };
@@ -1987,7 +1987,7 @@ Window_Base.prototype.drawItemName = function(item, x, y, width) {
         var padding = (iconBoxWidth - Window_Base._iconWidth) / 2;
         this.resetTextColor();
         this.drawIcon(item.iconIndex, x + padding, y + padding);
-        this.drawText(item.name, x + iconBoxWidth, y, width - iconBoxWidth);
+        this.drawText(item.name, x + iconBoxWidth + 8, y, width - iconBoxWidth);
     }
 };
 
@@ -2208,7 +2208,7 @@ Window_BattleStatus.prototype.gaugeAreaWidth = function() {
 
 Window_BattleStatus.prototype.drawBasicArea = function(rect, actor) {
     var minIconArea = Window_Base._iconWidth * 2;
-    var nameLength = this.textWidth('0') * 16 + 6;
+    var nameLength = this.textWidth('0') * 12 + 6;
     var iconWidth = Math.max(rect.width - nameLength, minIconArea);
     var nameWidth = rect.width - iconWidth;
     this.drawActorName(actor, rect.x + 0, rect.y, nameWidth);

@@ -1743,11 +1743,12 @@ Game_Action.prototype.executeDamage = function(target, value) {
     }
 };
 
-Game_Action.prototype.executeHpDamage = function(target, value) {
+Game_Action.prototype.executeHpDamage = function(target, value) {//CHANGED
     if (this.isDrain()) {
         value = Math.min(target.hp, value);
     }
     this.makeSuccess(target);
+    if (value < 0) value *= this.subject().pha;
     target.gainHp(-value);
     if (value > 0) {
         target.onDamage(value);
@@ -3215,10 +3216,11 @@ Game_Battler.prototype.chargeTpByDamage = function(damageRate) {
     this.gainSilentTp(value);
 };
 
-Game_Battler.prototype.regenerateHp = function() {
+Game_Battler.prototype.regenerateHp = function() {//CHANGED
     var value = Math.floor(this.mhp * this.hrg);
     value = Math.max(value, -this.maxSlipDamage());
     if (value !== 0) {
+        if (value > 0) value *= this.rec;
         this.gainHp(value);
     }
 };

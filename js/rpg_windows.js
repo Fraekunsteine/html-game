@@ -581,7 +581,7 @@ Window_Base.prototype.drawActorTp = function(actor, x, y, width) {
     this.drawText(actor.tp, x + width - 64, y, 64, 'right');
 };
 
-Window_Base.prototype.drawActorSimpleStatus = function(actor, x, y, width) {
+Window_Base.prototype.drawActorSimpleStatus = function(actor, x, y, width) {//CHANGED
     var lineHeight = this.lineHeight();
     var x2 = x + 180;
     var width2 = Math.min(200, width - 180 - this.textPadding());
@@ -2537,30 +2537,28 @@ Window_Status.prototype.refresh = function() {
     if (this._actor) {
         var lineHeight = this.lineHeight();
         this.drawBlock1(lineHeight * 0);
-        this.drawHorzLine(lineHeight * 1);
-        this.drawBlock2(lineHeight * 2);
-        this.drawHorzLine(lineHeight * 6);
-        this.drawBlock3(lineHeight * 7);
-        this.drawHorzLine(lineHeight * 13);
-        this.drawBlock4(lineHeight * 14);
+        this.drawBlock2(lineHeight * 1);
+        this.drawHorzLine(lineHeight * 6.5);
+        this.drawBlock3(lineHeight * 7.5);
+        this.drawHorzLine(lineHeight * 12.5);
+        this.drawBlock4(lineHeight * 13.5);
     }
 };
 
-Window_Status.prototype.drawBlock1 = function(y) {
+Window_Status.prototype.drawBlock1 = function(y) {//CHANGED
     this.drawActorName(this._actor, 6, y);
-    this.drawActorClass(this._actor, 192, y);
-    this.drawActorNickname(this._actor, 432, y);
+    this.drawActorClass(this._actor, 204, y);
 };
 
-Window_Status.prototype.drawBlock2 = function(y) {
-    this.drawActorFace(this._actor, 12, y);
-    this.drawBasicInfo(204, y);
-    this.drawExpInfo(456, y);
+Window_Status.prototype.drawBlock2 = function(y) {//CHANGED
+    this.drawActorFace(this._actor, 6, y + this.lineHeight() / 4);
+    this.drawBasicInfo(204, y + this.lineHeight() / 4);
+    this.drawBasicExpInfo(6, y + this.lineHeight() * 4.5);
+    this.drawEquipments(540, y - this.lineHeight());
 };
 
 Window_Status.prototype.drawBlock3 = function(y) {
-    this.drawParameters(48, y);
-    this.drawEquipments(432, y);
+    this.drawAllParameters(6, y);
 };
 
 Window_Status.prototype.drawBlock4 = function(y) {
@@ -2578,12 +2576,16 @@ Window_Status.prototype.lineColor = function() {
     return this.normalColor();
 };
 
-Window_Status.prototype.drawBasicInfo = function(x, y) {
+Window_Status.prototype.drawBasicInfo = function(x, y) { //CHANGED
     var lineHeight = this.lineHeight();
-    this.drawActorLevel(this._actor, x, y + lineHeight * 0);
-    this.drawActorIcons(this._actor, x, y + lineHeight * 1);
-    this.drawActorHp(this._actor, x, y + lineHeight * 2);
-    this.drawActorMp(this._actor, x, y + lineHeight * 3);
+    var barLength = 280;
+    this.drawActorLevel(this._actor, x, y);
+    this.drawActorIcons(this._actor, x + 120, y, 160);
+    this.drawActorHp(this._actor, x, y + lineHeight * 1, barLength);
+    this.drawActorMp(this._actor, x, y + lineHeight * 2, barLength);
+    if($dataSystem.optDisplayTp) {
+        this.drawActorTp(this._actor, x, y + lineHeight * 3, barLength);
+    }
 };
 
 Window_Status.prototype.drawParameters = function(x, y) {
@@ -2596,6 +2598,100 @@ Window_Status.prototype.drawParameters = function(x, y) {
         this.resetTextColor();
         this.drawText(this._actor.param(paramId), x + 160, y2, 60, 'right');
     }
+};
+
+Window_Status.prototype.drawAllParameters = function(x, y) {//CHANGED
+    var lineHeight = this.lineHeight();
+    var offset = 0;
+    var paramNameSize = 120;
+    var valueSize = 75;
+    for (var i = 0; i < 5; i++) {
+        var paramId = i + 2;
+        var y2 = y + lineHeight * i;
+        this.changeTextColor(this.systemColor());
+        this.drawText(TextManager.param(paramId), x + offset, y2, paramNameSize);
+        this.resetTextColor();
+        this.drawText(this._actor.param(paramId), x + offset + paramNameSize, y2, valueSize, 'right');
+    }
+    var actor = this._actor;
+    offset += 225;
+    y2 = y;
+    this.changeTextColor(this.systemColor());
+    this.drawText(TextManager.param(7), x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(actor.param(7), x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("ACCURACY", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round(actor.hit * 100), x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("PRECISION", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round(actor.luk / (actor.level * 1.5 + 20) * 100) / 100, x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("MELEE EVA", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((actor.eva + Math.min(actor.agi / 200, 0.1)) * 100), x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;  
+    this.changeTextColor(this.systemColor());
+    this.drawText("RANGED EVA", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((actor.mev + Math.min(actor.agi / 400, 0.05)) * 100), x + offset + paramNameSize, y2, valueSize, 'right');    
+    offset += 225;
+    y2 = y;  
+    this.changeTextColor(this.systemColor());
+    this.drawText("MELEE RES", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1 - actor.pdr) * 100) + "%", x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("RANGED RES", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1 - actor.mdr) * 100) + "%", x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("BLUNT RES", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1-actor.elementRate(1))*100)+"%", x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("PIERCING RES", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1-actor.elementRate(2))*100)+"%", x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("SLASH RES", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1-actor.elementRate(3))*100)+"%", x + offset + paramNameSize, y2, valueSize, 'right');          
+    offset += 225;
+    y2 = y;
+    this.changeTextColor(this.systemColor());
+    this.drawText("ELECTRIC RES", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1-actor.elementRate(4))*100)+"%", x + offset + paramNameSize, y2, valueSize, 'right');   
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("BLAST RES", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1-actor.elementRate(5))*100)+"%", x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("FIRE RES", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1-actor.elementRate(6))*100)+"%", x + offset + paramNameSize, y2, valueSize, 'right');   
+    y2 += lineHeight;  
+    this.changeTextColor(this.systemColor());
+    this.drawText("CRIT RATE", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((actor.cri + Math.min(actor.luk / 500, 0.1)) * 100) + "%", x + offset + paramNameSize, y2, valueSize, 'right');
+    y2 += lineHeight;
+    this.changeTextColor(this.systemColor());
+    this.drawText("CRIT DAMAGE", x + offset, y2, paramNameSize);
+    this.resetTextColor();
+    this.drawText(Math.round((1 + actor.criticalMultiplierBonus()) * 100) + "%", x + offset + paramNameSize, y2, valueSize, 'right');
 };
 
 Window_Status.prototype.drawExpInfo = function(x, y) {
@@ -2616,11 +2712,32 @@ Window_Status.prototype.drawExpInfo = function(x, y) {
     this.drawText(value2, x, y + lineHeight * 3, 270, 'right');
 };
 
-Window_Status.prototype.drawEquipments = function(x, y) {
+Window_Status.prototype.drawBasicExpInfo = function(x, y) {//CHANGED
+    var lineHeight = this.lineHeight();
+    var expNext = TextManager.expNext.format(TextManager.exp, TextManager.level);
+    var value1 = this._actor.nextRequiredExp();
+    if (this._actor.isMaxLevel()) {
+        value1 = '-------';
+    }
+    this.changeTextColor(this.systemColor());
+    this.drawText(expNext, x, y + lineHeight * 0, 300);
+    this.resetTextColor();
+    this.drawText(value1, x + 300, y + lineHeight * 0, 100, 'right');
+};
+
+Window_Status.prototype.drawEquipments = function(x, y) {//CHANGED
+    this.changeTextColor(this.systemColor());
+    this.drawText("CURRENT EQUIPMENT", x, y);
     var equips = this._actor.equips();
     var count = Math.min(equips.length, this.maxEquipmentLines());
     for (var i = 0; i < count; i++) {
-        this.drawItemName(equips[i], x, y + this.lineHeight() * i);
+        var equipment = equips[i];
+        if(!equipment) {
+            equipment = new Game_Item();          
+            equipment.setEquip(this._actor.equipSlots()[i + 1] === 1, 40);
+            equipment = equipment.object();
+        }
+        this.drawItemName(equipment, x, y + this.lineHeight() * (i + 1.5));
     }
 };
 
@@ -5502,8 +5619,8 @@ Window_BattleStatus.prototype.gaugeAreaWidth = function() {
 };
 
 Window_BattleStatus.prototype.drawBasicArea = function(rect, actor) {
-    this.drawActorName(actor, rect.x + 0, rect.y, 150);
-    this.drawActorIcons(actor, rect.x + 156, rect.y, rect.width - 156);
+    this.drawActorName(actor, rect.x + 0, rect.y, 120);
+    this.drawActorIcons(actor, rect.x + 128, rect.y, rect.width - 156);
 };
 
 Window_BattleStatus.prototype.drawGaugeArea = function(rect, actor) {
@@ -5522,7 +5639,7 @@ Window_BattleStatus.prototype.drawGaugeAreaWithTp = function(rect, actor) {
 
 Window_BattleStatus.prototype.drawGaugeAreaWithoutTp = function(rect, actor) {
     this.drawActorHp(actor, rect.x + 0, rect.y, 201);
-    this.drawActorMp(actor, rect.x + 216,  rect.y, 114);
+    this.drawActorMp(actor, rect.x + 216, rect.y, 114);
 };
 
 //-----------------------------------------------------------------------------
