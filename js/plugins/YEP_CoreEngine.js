@@ -1937,7 +1937,7 @@ Window_Base.prototype.drawActorTp = function(actor, x, y, width) {
       'right');
 };
 
-Window_Base.prototype.drawActorSimpleStatus = function(actor, x, y, width) {
+Window_Base.prototype.drawActorSimpleStatus = function(actor, x, y, width) {//CHANGED
     var lineHeight = this.lineHeight();
     var xpad = Window_Base._faceWidth + (2 * Yanfly.Param.TextPadding);
     var x2 = x + xpad;
@@ -1947,9 +1947,12 @@ Window_Base.prototype.drawActorSimpleStatus = function(actor, x, y, width) {
     this.drawActorIcons(actor, x, y + lineHeight * 2);
     this.drawActorClass(actor, x2, y, width2);
     this.drawActorHp(actor, x2, y + lineHeight * 1, width2);
-    this.drawActorMp(actor, x2, y + lineHeight * 2, width2);
-    if ($dataSystem.optDisplayTp) {
-      this.drawActorTp(actor, x2, y + lineHeight * 3, width2);
+    if (!$dataSystem.optDisplayTp) {
+      this.drawActorMp(actor, x2, y + lineHeight * 2, width2);
+    }
+    else {
+      this.drawActorMp(actor, x2, y + lineHeight * 2, width2 / 2 - 10);
+      this.drawActorTp(actor, x2 + width2 / 2 + 10, y + lineHeight * 2, width2 / 2 - 10);
     }
 };
 
@@ -1980,14 +1983,17 @@ Window_Base.prototype.usingGoldIcon = function(unit) {
     return Yanfly.Icon.Gold > 0;
 };
 
-Window_Base.prototype.drawItemName = function(item, x, y, width) {
+Window_Base.prototype.drawItemName = function(item, x, y, width) {//CHANGED
     width = width || 312;
-    if (item) {
-        var iconBoxWidth = this.lineHeight();
-        var padding = (iconBoxWidth - Window_Base._iconWidth) / 2;
-        this.resetTextColor();
-        this.drawIcon(item.iconIndex, x + padding, y + padding);
-        this.drawText(item.name, x + iconBoxWidth + 8, y, width - iconBoxWidth);
+    var iconBoxWidth = this.lineHeight();
+    var padding = (iconBoxWidth - Window_Base._iconWidth) / 2;
+    this.resetTextColor();
+    if (item) {       
+      this.drawIcon(item.iconIndex, x + padding, y + padding);
+      this.drawText(item.name, x + iconBoxWidth + 8, y, width - iconBoxWidth);
+    }
+    else {
+      this.drawText("<Empty>", x + iconBoxWidth + 8, y, width - iconBoxWidth);
     }
 };
 

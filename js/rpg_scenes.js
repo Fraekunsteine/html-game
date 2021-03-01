@@ -296,7 +296,7 @@ Scene_Title.prototype.drawGameTitle = function() {
     var text = $dataSystem.gameTitle;
     this._gameTitleSprite.bitmap.outlineColor = 'black';
     this._gameTitleSprite.bitmap.outlineWidth = 8;
-    this._gameTitleSprite.bitmap.fontSize = 72;
+    this._gameTitleSprite.bitmap.fontSize = 48;
     this._gameTitleSprite.bitmap.drawText(text, x, y, maxWidth, 48, 'center');
 };
 

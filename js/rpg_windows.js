@@ -581,7 +581,7 @@ Window_Base.prototype.drawActorTp = function(actor, x, y, width) {
     this.drawText(actor.tp, x + width - 64, y, 64, 'right');
 };
 
-Window_Base.prototype.drawActorSimpleStatus = function(actor, x, y, width) {//CHANGED
+Window_Base.prototype.drawActorSimpleStatus = function(actor, x, y, width) {
     var lineHeight = this.lineHeight();
     var x2 = x + 180;
     var width2 = Math.min(200, width - 180 - this.textPadding());
@@ -2624,7 +2624,7 @@ Window_Status.prototype.drawAllParameters = function(x, y) {//CHANGED
     this.changeTextColor(this.systemColor());
     this.drawText("ACCURACY", x + offset, y2, paramNameSize);
     this.resetTextColor();
-    this.drawText(Math.round(actor.hit * 100), x + offset + paramNameSize, y2, valueSize, 'right');
+    this.drawText(Math.round((actor.hit + Math.min(actor.luk / 800, 0.05)) * 100), x + offset + paramNameSize, y2, valueSize, 'right');
     y2 += lineHeight;
     this.changeTextColor(this.systemColor());
     this.drawText("PRECISION", x + offset, y2, paramNameSize);
@@ -2634,12 +2634,12 @@ Window_Status.prototype.drawAllParameters = function(x, y) {//CHANGED
     this.changeTextColor(this.systemColor());
     this.drawText("MELEE EVA", x + offset, y2, paramNameSize);
     this.resetTextColor();
-    this.drawText(Math.round((actor.eva + Math.min(actor.agi / 200, 0.1)) * 100), x + offset + paramNameSize, y2, valueSize, 'right');
+    this.drawText(Math.round((actor.eva + Math.min((actor.agi + actor.luk) / 400, 0.2)) * 100), x + offset + paramNameSize, y2, valueSize, 'right');
     y2 += lineHeight;  
     this.changeTextColor(this.systemColor());
     this.drawText("RANGED EVA", x + offset, y2, paramNameSize);
     this.resetTextColor();
-    this.drawText(Math.round((actor.mev + Math.min(actor.agi / 400, 0.05)) * 100), x + offset + paramNameSize, y2, valueSize, 'right');    
+    this.drawText(Math.round((actor.mev + Math.min((actor.agi + actor.luk) / 800, 0.1)) * 100), x + offset + paramNameSize, y2, valueSize, 'right');    
     offset += 225;
     y2 = y;  
     this.changeTextColor(this.systemColor());

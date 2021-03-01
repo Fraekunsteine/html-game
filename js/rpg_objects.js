@@ -2378,9 +2378,9 @@ Game_BattlerBase.prototype.traitsWithId = function(code, id) {
     });
 };
 
-Game_BattlerBase.prototype.traitsPi = function(code, id) {
+Game_BattlerBase.prototype.traitsPi = function(code, id) {//CHANGED
     return this.traitsWithId(code, id).reduce(function(r, trait) {
-        return r * trait.value;
+        return r + (trait.value - 1);
     }, 1);
 };
 
