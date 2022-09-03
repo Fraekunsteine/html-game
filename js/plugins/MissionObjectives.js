@@ -21,6 +21,10 @@
 * @param Event Switch
 * @desc The switch ID for checking whether a mission objective is active.
 * @default 1
+
+* @param Title
+* @desc The name of the display title for the mission objective screen.
+* @default MY MEMOS
 *
 * @help
 *
@@ -46,6 +50,7 @@ var openBrace = String(parameters['Open Brace'] || '\"');
 var closeBrace = String(parameters['Close Brace'] || '\"');
 var openMemoKey = String(parameters['Open Memo Key'] || 'tab');
 var switchID = Number(parameters['Event Switch'] || 1);
+var title = String(parameters['Title'] || "MY MEMOS");
 
 var _Game_Interpreter_pluginCommand = Game_Interpreter.prototype.pluginCommand;
 Game_Interpreter.prototype.pluginCommand = function(command, args) {
@@ -60,21 +65,27 @@ Game_Interpreter.prototype.pluginCommand = function(command, args) {
             break; 
         case 'addmain':
             $gameSystem.addObjective(args[0], args[1], args[2]);
+            $gameSystem.addUpdateMessage("New memo added!");
             break;
         case 'addsub':
             $gameSystem.addSubObjective(args[0], args[1], args[2]);
+            $gameSystem.addUpdateMessage("New task added!");
             break;
         case 'donemain':
             $gameSystem.completeObjective(args[0], args[1]);
+            $gameSystem.addUpdateMessage("Memo completed!");
             break;
         case 'donesub':
             $gameSystem.completeSubObjective(args[0], args[1], args[2]);
+            $gameSystem.addUpdateMessage("Task completed!");
             break;
         case 'setmain':
             $gameSystem.setObjective(args[0], args[1], args[2]);
+            $gameSystem.addUpdateMessage("Memo entry updated!");
             break;
         case 'setsub':
             $gameSystem.setSubObjective(args[0], args[1], args[2]);
+            $gameSystem.addUpdateMessage("Memo entry updated!");
             break;
         case 'checkmain':
             $gameSwitches.setValue(switchID, $gameSystem.checkIfObjectiveIsActive(args[0]));
@@ -114,9 +125,33 @@ Scene_Map.prototype.updateScene = function() {
         this.updateCallMemo();
     }
 };
+var _Scene_Map_update = Scene_Map.prototype.update;
+Scene_Map.prototype.update = function() {
+    _Scene_Map_update.call(this);
+    var messages = $gameSystem.getUpdateMessages();
+    if(messages && messages.length > 0) {
+        this._missionUpdateWindow.setUpdateMessages(messages);
+        this._missionUpdateWindow.open();
+    }
+};
+var _Scene_Map_stop = Scene_Map.prototype.stop;
+Scene_Map.prototype.stop = function() {
+    _Scene_Map_stop.call(this);
+    this._missionUpdateWindow.close();
+};
+var _Scene_Map_createAllWindows = Scene_Map.prototype.createAllWindows;
+Scene_Map.prototype.createAllWindows = function() {
+    _Scene_Map_createAllWindows.call(this);
+    this.createMissionUpdateWindow();
+};
+
+Scene_Map.prototype.createMissionUpdateWindow = function() {
+    this._missionUpdateWindow = new Window_MissionUpdateText();
+    this.addChild(this._missionUpdateWindow);
+};
 Scene_Map.prototype.updateCallMemo = function() {
     if ($gameSystem.isMemoEnabled()) {
-        if (this.isMemoCalled() && !$gamePlayer.isMoving()) {
+        if (this.isMemoCalled()) {
             SoundManager.playOk();
             SceneManager.push(Scene_Mission);
         }
@@ -126,6 +161,7 @@ Scene_Map.prototype.isMemoCalled = function() {
     return Input.isTriggered(openMemoKey);
 };
 
+// Game Object for the mission objectives
 function Game_Mission() {
     this.initialize.apply(this, arguments);
 }
@@ -149,8 +185,11 @@ Game_Mission.prototype.setActive = function(bool) {
 Game_Mission.prototype.completeObjective = function(fail) {
     if(this._active) {
         this._objective += fail ? " ✗" : " ✓";
-        this._success = !!fail;
+        this._success = !fail;
         this.setActive(false);
+        this._subObjectives.forEach(function(sub) {
+            $gameSystem.completeSubObjective(this._id, sub._alias, fail);
+        }.bind(this));
     }
 };
 
@@ -158,7 +197,17 @@ var _Game_System_initialize = Game_System.prototype.initialize;
 Game_System.prototype.initialize = function() {
     _Game_System_initialize.call(this);
     this._allObjectives = [];
+    this._updateMessages = [];
     this._memoEnabled = false;
+};
+Game_System.prototype.addUpdateMessage = function(message) {
+    this._updateMessages.push(message);
+};
+Game_System.prototype.clearUpdateMessages = function() {
+    this._updateMessages = [];
+};
+Game_System.prototype.getUpdateMessages = function() {
+    return this._updateMessages;
 };
 Game_System.prototype.addObjective = function(id, alias, data) {
     var i = this._allObjectives.map(function(obj) {return obj._id || null}).indexOf(id);
@@ -188,7 +237,6 @@ Game_System.prototype.addSubObjective = function(id, subAlias, item) {
 Game_System.prototype.completeObjective = function(id, fail) {
     var i = this._allObjectives.map(function(obj) {return obj._id || null}).indexOf(id);
     if(i !== -1) {
-        console.log(this._allObjectives[i])
         this._allObjectives[i].completeObjective(fail);
     }
 };
@@ -265,35 +313,34 @@ Scene_Mission.prototype.create = function() {
     var titleHeight = this._title.fittingHeight(1);  
     var wh = Graphics.boxHeight - titleHeight; 
 
-    this._indexWindow = new Window_Mission(0, titleHeight, wh);
-    this._indexWindow.setHandler('cancel', this.onSelectCancel.bind(this));
+    this._missionListWindow = new Window_MissionList(0, titleHeight, wh);
+    this._missionListWindow.setHandler('cancel', this.onSelectCancel.bind(this));
 
-    var wx = this._indexWindow.width;
+    var wx = this._missionListWindow.width;
     var ww = Graphics.boxWidth - wx;
 
-    this._indexModeWindow = new Window_MissionIndex(wx, 0, ww);
-    this._indexModeWindow.setHandler('ok', this.onSelectOk.bind(this));
-    this._indexModeWindow.setHandler('cancel', this.popScene.bind(this));
+    this._missionTypeWindow = new Window_MissionIndex(wx, 0, ww);
+    this._missionTypeWindow.setHandler('ok', this.onSelectOk.bind(this));
+    this._missionTypeWindow.setHandler('cancel', this.popScene.bind(this));
 
     this._displayWindow = new Window_MissionDisplay(wx, titleHeight, ww, wh);
 
     this.addWindow(this._title);
-    this.addWindow(this._indexWindow);
-    this.addWindow(this._indexModeWindow);
+    this.addWindow(this._missionListWindow);
+    this.addWindow(this._missionTypeWindow);
     this.addWindow(this._displayWindow);
 
-    this._indexModeWindow.setDisplayWindow(this._indexWindow);
-    this._indexWindow.setDisplayWindow(this._displayWindow);
+    this._missionTypeWindow.setDisplayWindow(this._missionListWindow);
+    this._missionListWindow.setDisplayWindow(this._displayWindow);
 };
 Scene_Mission.prototype.onSelectOk = function() {
-    this._indexWindow.refresh();
-    console.log(Window_Mission.lastIndex);
-    this._indexWindow.select(Window_Mission.lastIndex);
-    this._indexWindow.activate();
+    this._missionListWindow.refresh();
+    this._missionListWindow.select(Window_MissionList.lastIndex);
+    this._missionListWindow.activate();
 }
 Scene_Mission.prototype.onSelectCancel = function() {
-    this._indexWindow.createContents();
-    this._indexModeWindow.activate();
+    this._missionListWindow.createContents();
+    this._missionTypeWindow.activate();
 }
 
 function Window_MissionTitle() {
@@ -303,10 +350,10 @@ Window_MissionTitle.prototype = Object.create(Window_Base.prototype);
 Window_MissionTitle.prototype.constructor = Window_MissionTitle;
 
 Window_MissionTitle.prototype.initialize = function(x, y) {
-    var width = Graphics.boxWidth / 3;
+    var width = Graphics.boxWidth * 0.3;
     var height = this.fittingHeight(1);
     Window_Base.prototype.initialize.call(this, x, y, width, height);
-    this.drawText("My Memos", 0, 0, 120);
+    this.drawText(title, 0, 0, 120);
 };
 Window_MissionTitle.prototype.update = function() {
     Window_Base.prototype.update.call(this);          
@@ -357,25 +404,25 @@ Window_MissionIndex.prototype.drawItem = function(index) {
     this.drawText(item, rect.x, rect.y, rect.width, 'center');
 };
 
-function Window_Mission() {
+function Window_MissionList() {
     this.initialize.apply(this, arguments);
 }
-Window_Mission.prototype = Object.create(Window_Selectable.prototype);
-Window_Mission.prototype.constructor = Window_Mission;
+Window_MissionList.prototype = Object.create(Window_Selectable.prototype);
+Window_MissionList.prototype.constructor = Window_MissionList;
 
-Window_Mission.lastTopRow = 0;
-Window_Mission.lastIndex = 0;
+Window_MissionList.lastTopRow = 0;
+Window_MissionList.lastIndex = 0;
 
-Window_Mission.prototype.initialize = function(x, y, height) {
-    var width = Graphics.boxWidth / 3;
+Window_MissionList.prototype.initialize = function(x, y, height) {
+    var width = Graphics.boxWidth * 0.3;
     Window_Selectable.prototype.initialize.call(this, x, y, width, height);
-    this.setTopRow(Window_Mission.lastTopRow);
+    this.setTopRow(Window_MissionList.lastTopRow);
     this._list = [];
 };
-Window_Mission.prototype.maxItems = function() {
+Window_MissionList.prototype.maxItems = function() {
     return this._list ? this._list.length : 0;
 };
-Window_Mission.prototype.refresh = function() {
+Window_MissionList.prototype.refresh = function() {
     var list = $gameSystem.getObjectives();
     var check;     
     for(var i = list.length - 1; i >= 0; i--) {
@@ -398,40 +445,40 @@ Window_Mission.prototype.refresh = function() {
     this.createContents();
     this.drawAllItems();
 };
-Window_Mission.prototype.setDisplayMode = function(mode) {
+Window_MissionList.prototype.setDisplayMode = function(mode) {
     this._displayMode = mode;
-};
-Window_Mission.prototype.setDisplayWindow = function(window) {
-    this._displayWindow = window;
     this.updateStatus();
 };
-Window_Mission.prototype.update = function() {
+Window_MissionList.prototype.setDisplayWindow = function(window) {
+    this._displayWindow = window;
+};
+Window_MissionList.prototype.update = function() {
     Window_Selectable.prototype.update.call(this);
     this.updateStatus();
 };
-Window_Mission.prototype.updateStatus = function() {
+Window_MissionList.prototype.updateStatus = function() {
     if (this._displayWindow) {
         var item = this._list[this.index()];
         this._displayWindow.setItem(item);
     }
 };
-Window_Mission.prototype.drawItem = function(index) {     
+Window_MissionList.prototype.drawItem = function(index) {     
     var item = this._list[index];
     var rect = this.itemRectForText(index);
     this.changeTextColor(this.normalColor());
     this.changePaintOpacity(item._active);
-    this.contents.fontSize = 20;
+    this.contents.fontSize = 18;
     this.drawText(item._alias, rect.x, rect.y, rect.width);
 };
-Window_Mission.prototype.select = function(index) {  
+Window_MissionList.prototype.select = function(index) {  
     var maxIndex = this._list ? this._list.length - 1 : -1;
     if(index > maxIndex) index = maxIndex;
     Window_Selectable.prototype.select.call(this, index);
 };
-Window_Mission.prototype.processCancel = function() {
+Window_MissionList.prototype.processCancel = function() {
     Window_Selectable.prototype.processCancel.call(this);
-    Window_Mission.lastTopRow = this.topRow();
-    Window_Mission.lastIndex = this.index();
+    Window_MissionList.lastTopRow = this.topRow();
+    Window_MissionList.lastIndex = this.index();
     this.deselect();
     this._list = [];
 };
@@ -455,23 +502,126 @@ Window_MissionDisplay.prototype.setItem = function(item) {
 Window_MissionDisplay.prototype.update = function() {
     Window_Base.prototype.update.call(this);       
 };
-
 Window_MissionDisplay.prototype.refresh = function() {
     var x = 0;
     var y = 0;
-    var lineHeight = this.lineHeight();
     var objective = this._objective;
     this.contents.clear();
     if(objective) {
         this.changePaintOpacity(objective._active);
         this.changeTextColor(this.systemColor());
-        this.contents.fontSize = 28;
+        this.contents.fontSize = 32;
         this.drawText(objective._alias, x, y);
-        y += 8;
-        var list = "<WordWrap>" + objective._objective + "<br>";
-        objective._subObjectives.map(function(item) {
-            list += (" » " + item._data + "<br><br>");
-        });
-        this.drawTextEx(list, x, y + lineHeight);
+        y += 44;
+        this.changeTextColor(this.normalColor());
+        
+        this.contents.fontSize = 24;
+        x += 8;
+        var lines = this.applyTextBreak(objective._objective, Graphics.width * 0.7, 24);        
+        lines.forEach(function(line) {
+            this.drawText(line, x, y);
+            y += 28;
+        }.bind(this));
+        y += 12;
+        this.contents.fontSize = 20;
+        objective._subObjectives.forEach(function(item) {
+            lines = this.applyTextBreak(" » " + item._data, Graphics.width * 0.7, 20);
+            lines.forEach(function(line) {
+                this.drawText(line, x, y);
+                y += 24;
+            }.bind(this));
+            y += 8;
+        }.bind(this));
     }      
+};
+Window_MissionDisplay.prototype.applyTextBreak = function(text, boxWidth, fontSize) {
+    fontSize *= 0.55;
+    var lines = [];
+    if(text.length * fontSize < boxWidth) {
+        lines.push(text);
+        return lines;
+    }
+    var words = text.split(" "); 
+    var line = "";
+    for(var i = 0, len = 0; i < words.length;) {
+        len += (words[i].length + 1);
+        if(len * fontSize < boxWidth) {
+            line += `${words[i++]} `;
+        }
+        else {
+            lines.push(line);
+            line = "";
+            len = 0;
+        }
+    }
+    if(line.length > 0) lines.push(line);
+    return lines;
+};
+
+function Window_MissionUpdateText() {
+    this.initialize.apply(this, arguments);
+}
+
+Window_MissionUpdateText.prototype = Object.create(Window_Base.prototype);
+Window_MissionUpdateText.prototype.constructor = Window_MissionUpdateText;
+
+Window_MissionUpdateText.prototype.initialize = function() {
+    var width = Graphics.width;
+    var height = Graphics.height;
+    Window_Base.prototype.initialize.call(this, 0, 0, width, height);
+    this._updateMessages = [];
+    this.opacity = 0;
+    this.contentsOpacity = 0;
+    this._showCount = 0;
+    this.refresh();
+};
+Window_MissionUpdateText.prototype.windowWidth = function() {
+    return 360;
+};
+Window_MissionUpdateText.prototype.windowHeight = function() {
+    return this.fittingHeight(1);
+};
+Window_MissionUpdateText.prototype.update = function() {
+    Window_Base.prototype.update.call(this);
+    if (this._showCount > 0) {
+        this.updateFadeIn();
+        this._showCount--;
+    } else {
+        this.updateFadeOut();
+    }
+};
+Window_MissionUpdateText.prototype.updateFadeIn = function() {
+    this.contentsOpacity += 16;
+};
+Window_MissionUpdateText.prototype.updateFadeOut = function() {
+    this.contentsOpacity -= 16;
+};
+Window_MissionUpdateText.prototype.open = function() {
+    this.refresh();
+    this._showCount = 100;
+};
+Window_MissionUpdateText.prototype.close = function() {
+    this._showCount = 0;
+};
+Window_MissionUpdateText.prototype.refresh = function() {
+    this.contents.clear();
+    var width = this.windowWidth();
+    var x = Graphics.width - width;
+    var y = Graphics.height / 2 - this.windowHeight();
+    this.contents.fontSize = 20;
+    this._updateMessages.forEach(function(message) {
+        this.drawBackground(x, y, width, this.lineHeight());
+        this.drawText(message, x, y, width, 'center');
+        y -= this.lineHeight();
+    }.bind(this));  
+    $gameSystem.clearUpdateMessages();
+};
+Window_MissionUpdateText.prototype.drawBackground = function(x, y, width, height) {
+    var color1 = this.dimColor1();
+    var color2 = this.dimColor2();
+    this.contents.gradientFillRect(x, y, width / 2, height, color2, color1);
+    this.contents.gradientFillRect(x + width / 2, y, width / 2, height, color1, color2);
+};
+Window_MissionUpdateText.prototype.setUpdateMessages = function(messages) {
+    this._updateMessages = messages;
 };
